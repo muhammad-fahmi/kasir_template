@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kasir Mini</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printable-receipt, #printable-receipt * { visibility: visible; }
+      #printable-receipt { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: none; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 antialiased pb-20 md:pb-6">
+  <div class="max-w-md md:max-w-3xl mx-auto min-h-screen flex flex-col bg-white shadow-sm">
+    <header class="bg-indigo-600 text-white p-4 flex justify-between items-center sticky top-0 z-20">
+      <h1 class="font-bold text-lg">Kasir Mini</h1>
+      <nav class="hidden md:flex gap-2">
+        <button onclick="switchTab('catalog')" id="desktop-tab-catalog" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-700">Katalog</button>
+        <button onclick="switchTab('cart')" id="desktop-tab-cart" class="px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-indigo-500 relative">
+          Keranjang <span id="cart-badge-desktop" class="hidden bg-rose-500 text-xs px-1.5 py-0.5 rounded-full ml-1">0</span>
+        </button>
+        <button onclick="switchTab('receipt')" id="desktop-tab-receipt" class="px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-indigo-500">Struk</button>
+      </nav>
+    </header>
+
+    <main class="flex-1 p-4">
+      <section id="screen-catalog" class="space-y-4">
+        <h2 class="font-semibold text-gray-700">Pilih Produk</h2>
+        <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+      </section>
+
+      <section id="screen-cart" class="hidden space-y-4">
+        <h2 class="font-semibold text-gray-700">Keranjang Belanja</h2>
+        <div id="cart-list" class="space-y-2"></div>
+
+        <div class="border-t pt-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <label for="discount-input" class="text-sm text-gray-600">Diskon (%)</label>
+            <input type="number" id="discount-input" min="0" max="100" value="0" oninput="updateCartUI()" class="w-20 border rounded px-2 py-1 text-right text-sm" />
+          </div>
+          <div class="space-y-1 text-sm">
+            <div class="flex justify-between text-gray-600">
+              <span>Subtotal</span>
+              <span id="summary-subtotal">Rp 0</span>
+            </div>
+            <div class="flex justify-between text-rose-600">
+              <span>Diskon</span>
+              <span id="summary-discount">- Rp 0</span>
+            </div>
+            <div class="flex justify-between font-bold text-base border-t pt-2 text-gray-900">
+              <span>Total Bayar</span>
+              <span id="summary-total">Rp 0</span>
+            </div>
+          </div>
+          <button onclick="checkout()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg text-sm">
+            Proses & Cetak Struk
+          </button>
+        </div>
+      </section>
+
+      <section id="screen-receipt" class="hidden space-y-4">
+        <div id="printable-receipt" class="border border-dashed border-gray-300 p-5 rounded-lg font-mono text-xs max-w-sm mx-auto bg-gray-50 space-y-3">
+          <div class="text-center space-y-1">
+            <p class="font-bold text-sm uppercase">Toko Serba Ada</p>
+            <p class="text-gray-500">Jl. Sederhana No. 1</p>
+            <p id="receipt-date" class="text-gray-400"></p>
+          </div>
+          <div class="border-b border-dashed border-gray-300"></div>
+          <div id="receipt-items" class="space-y-1.5"></div>
+          <div class="border-b border-dashed border-gray-300"></div>
+          <div class="space-y-1 text-right">
+            <div class="flex justify-between"><span>Subtotal</span><span id="receipt-subtotal">Rp 0</span></div>
+            <div class="flex justify-between"><span>Diskon</span><span id="receipt-discount">Rp 0</span></div>
+            <div class="flex justify-between font-bold text-sm"><span>Total</span><span id="receipt-total">Rp 0</span></div>
+          </div>
+          <p class="text-center text-gray-400 pt-2">Terima kasih atas kunjungan Anda</p>
+        </div>
+
+        <div class="flex gap-2 max-w-sm mx-auto">
+          <button onclick="window.print()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">Cetak Struk</button>
+          <button onclick="resetOrder()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg text-sm font-medium">Transaksi Baru</button>
+        </div>
+      </section>
+    </main>
+
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 z-20">
+      <button onclick="switchTab('catalog')" id="mobile-tab-catalog" class="flex-1 flex flex-col items-center py-1 text-indigo-600 font-medium text-xs">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+        Katalog
+      </button>
+      <button onclick="switchTab('cart')" id="mobile-tab-cart" class="flex-1 flex flex-col items-center py-1 text-gray-500 font-medium text-xs relative">
+        <span id="cart-badge-mobile" class="hidden absolute top-0.5 right-6 bg-rose-500 text-white text-[10px] px-1.5 rounded-full">0</span>
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        Keranjang
+      </button>
+      <button onclick="switchTab('receipt')" id="mobile-tab-receipt" class="flex-1 flex flex-col items-center py-1 text-gray-500 font-medium text-xs">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Struk
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    // ponytail: Data statis lokal, ganti API endpoint bila butuh sinkronisasi backend.
+    const products = [
+      { id: 1, name: "Kopi Susu Gula Aren", price: 18000, img: "https://images.unsplash.com/photo-1541167760496-1628856ab772?w=300&q=80" },
+      { id: 2, name: "Croissant Butter", price: 22000, img: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=300&q=80" },
+      { id: 3, name: "Matcha Latte", price: 24000, img: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=300&q=80" },
+      { id: 4, name: "Roti Bakar Cokelat", price: 15000, img: "https://images.unsplash.com/photo-1586985289688-ca3cf47d3e6e?w=300&q=80" },
+      { id: 5, name: "Air Mineral 600ml", price: 5000, img: "https://images.unsplash.com/photo-1559839914-1b34645a380e?w=300&q=80" },
+      { id: 6, name: "Kentang Goreng", price: 17000, img: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=300&q=80" }
+    ];
+
+    const cart = {};
+
+    const formatIDR = (n) => "Rp " + Math.round(n).toLocaleString("id-ID");
+
+    function renderCatalog() {
+      const grid = document.getElementById("product-grid");
+      grid.innerHTML = products.map(p => {
+        const qty = cart[p.id] || 0;
+        return `
+          <div class="border rounded-lg overflow-hidden flex flex-col justify-between bg-white shadow-xs">
+            <img src="${p.img}" alt="${p.name}" class="h-28 w-full object-cover bg-gray-100" loading="lazy" />
+            <div class="p-2.5 flex-1 flex flex-col justify-between">
+              <div>
+                <p class="font-medium text-xs leading-snug line-clamp-2">${p.name}</p>
+                <p class="text-indigo-600 font-semibold text-xs mt-1">${formatIDR(p.price)}</p>
+              </div>
+              <div class="flex items-center justify-between mt-3 pt-2 border-t">
+                <button onclick="changeQty(${p.id}, -1)" class="w-7 h-7 rounded border flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100">-</button>
+                <span class="text-xs font-semibold" id="qty-${p.id}">${qty}</span>
+                <button onclick="changeQty(${p.id}, 1)" class="w-7 h-7 rounded bg-indigo-600 text-white flex items-center justify-center font-bold hover:bg-indigo-700">+</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function changeQty(id, delta) {
+      const next = (cart[id] || 0) + delta;
+      if (next <= 0) delete cart[id];
+      else cart[id] = next;
+      const el = document.getElementById(`qty-${id}`);
+      if (el) el.innerText = cart[id] || 0;
+      updateBadges();
+    }
+
+    function getTotals() {
+      const subtotal = Object.entries(cart).reduce((sum, [id, qty]) => {
+        const item = products.find(p => p.id === Number(id));
+        return sum + (item ? item.price * qty : 0);
+      }, 0);
+      const discountPct = Math.min(100, Math.max(0, Number(document.getElementById("discount-input")?.value) || 0));
+      const discount = (subtotal * discountPct) / 100;
+      const total = Math.max(0, subtotal - discount);
+      return { subtotal, discount, total, discountPct };
+    }
+
+    function updateBadges() {
+      const count = Object.values(cart).reduce((a, b) => a + b, 0);
+      ['desktop', 'mobile'].forEach(type => {
+        const badge = document.getElementById(`cart-badge-${type}`);
+        if (!badge) return;
+        badge.innerText = count;
+        badge.classList.toggle("hidden", count === 0);
+      });
+    }
+
+    function updateCartUI() {
+      const list = document.getElementById("cart-list");
+      const entries = Object.entries(cart);
+      if (entries.length === 0) {
+        list.innerHTML = `<p class="text-center text-gray-400 py-8 text-sm">Keranjang masih kosong.</p>`;
+      } else {
+        list.innerHTML = entries.map(([id, qty]) => {
+          const item = products.find(p => p.id === Number(id));
+          return `
+            <div class="flex items-center justify-between py-2 border-b text-sm">
+              <div class="flex-1">
+                <p class="font-medium">${item.name}</p>
+                <p class="text-xs text-gray-500">${formatIDR(item.price)} × ${qty}</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="font-semibold mr-2">${formatIDR(item.price * qty)}</span>
+                <button onclick="changeQty(${id}, -1); updateCartUI();" class="w-6 h-6 border rounded text-xs leading-none">-</button>
+                <button onclick="changeQty(${id}, 1); updateCartUI();" class="w-6 h-6 bg-indigo-600 text-white rounded text-xs leading-none">+</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      const { subtotal, discount, total } = getTotals();
+      document.getElementById("summary-subtotal").innerText = formatIDR(subtotal);
+      document.getElementById("summary-discount").innerText = "- " + formatIDR(discount);
+      document.getElementById("summary-total").innerText = formatIDR(total);
+      updateBadges();
+    }
+
+    function checkout() {
+      if (Object.keys(cart).length === 0) {
+        alert("Keranjang kosong!");
+        return;
+      }
+      const { subtotal, discount, total } = getTotals();
+      const itemsList = document.getElementById("receipt-items");
+      itemsList.innerHTML = Object.entries(cart).map(([id, qty]) => {
+        const item = products.find(p => p.id === Number(id));
+        return `
+          <div class="flex justify-between">
+            <span>${item.name} × ${qty}</span>
+            <span>${formatIDR(item.price * qty)}</span>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("receipt-date").innerText = new Date().toLocaleString("id-ID");
+      document.getElementById("receipt-subtotal").innerText = formatIDR(subtotal);
+      document.getElementById("receipt-discount").innerText = "- " + formatIDR(discount);
+      document.getElementById("receipt-total").innerText = formatIDR(total);
+
+      switchTab("receipt");
+    }
+
+    function resetOrder() {
+      for (const k in cart) delete cart[k];
+      document.getElementById("discount-input").value = 0;
+      renderCatalog();
+      updateCartUI();
+      switchTab("catalog");
+    }
+
+    function switchTab(name) {
+      ['catalog', 'cart', 'receipt'].forEach(t => {
+        document.getElementById(`screen-${t}`).classList.toggle("hidden", t !== name);
+        
+        const mTab = document.getElementById(`mobile-tab-${t}`);
+        if (mTab) {
+          mTab.classList.toggle("text-indigo-600", t === name);
+          mTab.classList.toggle("text-gray-500", t !== name);
+        }
+
+        const dTab = document.getElementById(`desktop-tab-${t}`);
+        if (dTab) {
+          dTab.classList.toggle("bg-indigo-700", t === name);
+        }
+      });
+      if (name === "cart") updateCartUI();
+    }
+
+    renderCatalog();
+    updateBadges();
+  </script>
+</body>
+</html>
